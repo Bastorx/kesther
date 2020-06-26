@@ -1,0 +1,33 @@
+version:  '3.5'
+
+services:
+
+  esther:
+    build:
+      context: .
+      target: prod
+      args:
+        GITLAB_TOKEN: ${GITLAB_TOKEN}
+    image: local_esther:prod
+    environment:
+      PORT: 80
+      MONGODB_SERVICE_HOST: mongodb://mongodb.docker
+      MONGODB_PORT: 27017
+      MONGODB_DATABASE_NAME: esther
+    networks:
+      default:
+        aliases:
+          - esther.docker
+    depends_on:
+      - mongodb
+
+  mongodb:
+    image: mongo:4.2.1
+    networks:
+      default:
+        aliases:
+          - mongodb.docker
+
+networks:
+  default:
+    name: local_net_prod

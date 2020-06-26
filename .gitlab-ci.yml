@@ -1,0 +1,104 @@
+stages:
+  - test
+  - release-dev
+  - release-rc
+  - release
+  - deploy
+
+variables:
+  APP_IMAGE_PROD:     ${CI_REGISTRY_IMAGE}/app:${CI_COMMIT_REF_SLUG}
+  APP_IMAGE_DEV:      ${CI_REGISTRY_IMAGE}/app:latest
+  APP_IMAGE_RC:       ${CI_REGISTRY_IMAGE}/app:rc
+  APP_IMAGE_RELEASE:  ${CI_REGISTRY_IMAGE}/app:release
+
+Test app:
+  before_script:
+    - git config --global url.https://oauth2:"${GITLAB_TOKEN}"@gitlab.citodi.com/.insteadOf https://gitlab.citodi.com/
+  stage: test
+  image: golang:1.13-stretch
+  script:
+    # go formatting analysis
+    - /bin/sh -c 'if [ -n "$(gofmt -l .)" ]; then gofmt -d .; exit 1; fi'
+    # GO code quality analysis
+    - go vet ./...
+    # GO Unit Testing
+    - go test -race $(go list ./... | grep -v /vendor/) -v -coverprofile=coverage.out
+    - go tool cover -func=coverage.out
+
+Release-dev:
+  stage: release-dev
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    # Tag and push the release version
+    - DOCKER_BUILDKIT=1 docker build --target prod --tag $APP_IMAGE_PROD --build-arg GITLAB_TOKEN=$GITLAB_TOKEN .
+    - docker tag $APP_IMAGE_PROD $APP_IMAGE_DEV
+    - docker push $APP_IMAGE_DEV
+  only:
+    - develop
+
+#k8s-deploy-Dev:
+#  image: lwolf/kubectl_deployer:latest
+#  services:
+#  - docker:dind
+#  stage: deploy
+#  script:
+#  - kubectl config set-cluster my-cluster --server="$K8S_DEV_URL" --insecure-skip-tls-verify=true
+#  - kubectl config set-credentials admin --token="$K8S_DEV_TOKEN"
+#  - kubectl config set-context default-context --cluster=my-cluster --user=admin
+#  - kubectl config use-context default-context
+#  - kubectl delete pod -n dev -l app.kubernetes.io/name=citodi-uma
+#  only:
+#    - develop
+
+Release-rc:
+  stage: release-rc
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    # Tag and push the release version
+    - DOCKER_BUILDKIT=1 docker build --target prod --tag $APP_IMAGE_PROD --build-arg GITLAB_TOKEN=$GITLAB_TOKEN .
+    - docker tag $APP_IMAGE_PROD $APP_IMAGE_RC
+    - docker push $APP_IMAGE_RC
+  only:
+    - rc
+
+# k8s-deploy-Qual:
+#   image: lwolf/kubectl_deployer:latest
+#   services:
+#   - docker:dind
+#   stage: deploy
+#   script:
+#   - kubectl config set-cluster my-cluster --server="$K8S_QUAL_URL" --insecure-skip-tls-verify=true
+#   - kubectl config set-credentials admin --token="$K8S_QUAL_TOKEN"
+#   - kubectl config set-context default-context --cluster=my-cluster --user=admin
+#   - kubectl config use-context default-context
+#   - kubectl delete pod -n dev -l app.kubernetes.io/name=citodi-uma
+#   only:
+#     - rc
+
+Release-release:
+  stage: release
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    # Tag and push the release version
+    - DOCKER_BUILDKIT=1 docker build --target prod --tag $APP_IMAGE_PROD --build-arg GITLAB_TOKEN=$GITLAB_TOKEN .
+    - docker tag $APP_IMAGE_PROD $APP_IMAGE_RELEASE
+    - docker push $APP_IMAGE_RELEASE
+  only:
+    - master
+
+# k8s-deploy-Prod:
+#   image: lwolf/kubectl_deployer:latest
+#   services:
+#   - docker:dind
+#   stage: deploy
+#   script:
+#   - kubectl config set-cluster my-cluster --server="$K8S_PROD_URL" --insecure-skip-tls-verify=true
+#   - kubectl config set-credentials admin --token="$K8S_PROD_TOKEN"
+#   - kubectl config set-context default-context --cluster=my-cluster --user=admin
+#   - kubectl config use-context default-context
+#   - kubectl delete pod -n dev -l app.kubernetes.io/name=citodi-uma
+#   only:
+#     - rc

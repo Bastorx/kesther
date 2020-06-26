@@ -1,0 +1,34 @@
+openapi: 3.0.2
+
+info:
+  title: Esther API
+  version: 0.0.1
+  description: This document specifies the REST API of the **Esther** component.
+  contact:
+    url: 'https://kardinal.ai/'
+    email: contact@kardinal.ai
+
+servers:
+  - url: 'http://{hostname}:{port}/'
+    variables:
+      hostname:
+        default: localhost
+      port:
+        default: '80'
+  - url: 'https://{hostname}:{port}/'
+    variables:
+      hostname:
+        default: localhost
+      port:
+        default: '443'
+  - url: /
+
+#tags:
+
+#paths:
+
+#components:
+
+#  parameters:
+
+#  schemas:

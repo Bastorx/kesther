@@ -1,0 +1,47 @@
+<!doctype html>
+<html>
+<head>
+  <script src="./js/rapipdf-min.js"></script>
+    <style>
+      li {
+        min-height: 30px;
+      }
+      .toc {
+        margin: auto;
+        width: 700px;
+      }
+      rapi-pdf {
+        display: block;
+        width: 500px;
+        margin: auto;
+      }
+    </style>
+</head>
+<body>
+  <div class="toc">
+    <ul>
+      <li><a href="openapi.html" target="_blank">Swagger UI</a></li>
+      <li><a href="editor.html" target="_blank">Swagger Editor</a></li>
+      <li><a href="redoc.html" target="_blank">ReDoc</a></li>
+      <li><a href="rapidoc.html" target="_blank">RapiDoc</a></li>
+      <li>
+        RapiPdf&nbsp;:
+          <rapi-pdf
+            spec-url="./spec/openapi_esther.yaml"
+            style=""
+            button-label="Generate PDF"
+            hide-input="false"
+            pdf-footer-text="Copyright &copy; KARDINAL 2020"
+            include-api-list="true"
+          ></rapi-pdf>
+      </li>
+    </ul>
+    <hr>
+    <ul>
+      <li>
+        YAML specification file : <a href="./spec/openapi_esther.yaml" target="_blank">./spec/openapi_esther.yaml</a>
+      </li>
+    </ul>
+  </div>
+</body>
+</html>
