@@ -23,12 +23,262 @@ servers:
         default: '443'
   - url: /
 
-#tags:
+tags:
+  - name: Callback
+    description: 'How to create, retrieve, modify, apply and or delete some event callbacks.'
 
-#paths:
+paths:
 
-#components:
+  /plans/{id}/eventCallbacks:
+    parameters:
+      - $ref: '#/components/parameters/id'
+    get:
+      summary: Get all the event callbacks of a given plan
+      operationId: getCallbacks
+      tags:
+        - Callback
+      responses:
+        '200':
+          description: Event callbacks collection response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Callbacks'
+        '404':
+          description: Resource not found
+    post:
+      summary: Create an event callback in a given plan
+      operationId: postCallback
+      tags:
+        - Callback
+      requestBody:
+        description: An event callback entity contains the following informations
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Callback'
+      responses:
+        '201':
+          description: The event callback was created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Callbacks'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource not found
+    delete:
+      summary: Delete all the event callbacks of a given plan
+      operationId: deleteCallbacks
+      tags:
+        - Callback
+      responses:
+        '204':
+          description: The event callbacks were deleted
+        '400':
+          description: The event callbacks could not be deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource not found
 
-#  parameters:
+  /plans/{id}/eventCallbacks/{eventId}:
+    parameters:
+      - $ref: '#/components/parameters/id'
+      - $ref: '#/components/parameters/eventId'
+    get:
+      summary: Get an event callback of a given plan
+      operationId: getCallback
+      tags:
+        - Callback
+      responses:
+        '200':
+          description: Event callback response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Callback'
+        '404':
+          description: Resource not found
+    put:
+      summary: Update an event callback in a given plan
+      operationId: putCallback
+      tags:
+        - Callback
+      requestBody:
+        description: An event callback entity contains the following information
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Callback'
+      responses:
+        '200':
+          description: The event callback was updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Callbacks'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource not found
+    delete:
+      summary: Delete an event callback of a given plan
+      operationId: deleteCallback
+      tags:
+        - Callback
+      responses:
+        '204':
+          description: The event callback was deleted
+        '400':
+          description: The event callback could not be deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource not found
 
-#  schemas:
+  /plans/{id}/eventCallbacksToParent:
+    parameters:
+      - $ref: '#/components/parameters/id'
+    put:
+      summary: Apply all the event callbacks of a given plan to its parent plan
+      operationId: putCallbacksToParent
+      tags:
+        - Callback
+      requestBody:
+        description: An event callback entity contains the following informations
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Callback'
+      responses:
+        '200':
+          description: The event callback was updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Callbacks'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource not found
+
+components:
+
+  parameters:
+
+    id:
+      name: id
+      description: 'Internal identifier of a plan (the id which was returned by a POST request)'
+      in: path
+      required: true
+      schema:
+        type: string
+      example: 050cd592-462b-42aa-bff3-f08032c9f974
+
+    eventId:
+      name: eventId
+      description: 'Internal identifier of an event callback (the id which was returned by a POST request)'
+      in: path
+      required: true
+      schema:
+        type: string
+      example: 09a78b8c-7430-4356-a1cb-ca58257ccf98
+
+  schemas:
+
+    Action:
+      type: object
+      description: 'A possible action: apply to parent or undo'
+      properties:
+        planId:
+          type: string
+          description: The internal identifier of a plan
+        method:
+          type: string
+          description: The HTTP method to use for this action
+          enum:
+            - POST
+            - PUT
+            - DELETE
+        uri:
+          type: string
+          description: The URI of the action
+        payload:
+          type: object
+          description: The payload to use in the action, if needed
+      required:
+        - planId
+        - method
+        - uri
+    Callback:
+      type: object
+      description: An event callback
+      properties:
+        id:
+          type: string
+          description: The internal identifier of the event callback
+          readOnly: true
+        planId:
+          type: string
+          description: The internal identifier of a plan
+        title:
+          type: string
+          description: The title of the event callback
+        undo:
+          $ref: '#/components/schemas/Action'
+        parent:
+          $ref: '#/components/schemas/Action'
+      required:
+        - id
+        - planId
+        - undo
+        - parent
+    Callbacks:
+      type: array
+      description: A list of event callbacks
+      items:
+        $ref: '#/components/schemas/Callback'
+    Violation:
+      type: object
+      description: Description of the rule violation which caused an error
+      properties:
+        propertyPath:
+          type: string
+          description: The path of the concerned property whose value is wrong
+        message:
+          type: string
+    Error:
+      type: object
+      description: Details about an error which occurred during the treatment
+      properties:
+        title:
+          type: string
+          example: An error occurred
+        type:
+          type: string
+        detail:
+          type: string
+        violations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Violation'
+      required:
+        - title
