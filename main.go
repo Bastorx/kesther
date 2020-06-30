@@ -24,6 +24,9 @@ func setupRouter() *gin.Engine {
 	r := gin.New()
 	r.Use(logging.GinLogHandler(), gin.Recovery())
 
+	// TEMP
+	gin.SetMode(gin.DebugMode)
+
 	/* Monitoring */
 	r.GET("/", healthCheck)
 	r.GET("/ready", readyCheck)
@@ -31,8 +34,13 @@ func setupRouter() *gin.Engine {
 	/* API */
 	api := r.Group("/plans/:id")
 	{
-		// TODO
-		api.GET("/", healthCheck)
+		api.GET("/eventCallbacks", getCallbacks)
+		api.POST("/eventCallbacks", postOneCallback)
+		api.GET("/eventCallbacks/:eventId", getOneCallback)
+		api.PUT("/eventCallbacks/:eventId", putOneCallback)
+		api.DELETE("/eventCallbacks/:eventId", deleteOneCallback)
+		api.DELETE("/eventCallbacks", deleteCallbacks)
+		api.PUT("/eventCallbacksToParent", putCallbacksToParent)
 	}
 
 	/* OpenAPI doc */
