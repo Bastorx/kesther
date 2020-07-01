@@ -8,7 +8,7 @@ Set the needed environment variables (see examples in the [.env](./.env) file) a
 
 ```bash
 export PORT=8080
-export MONGODB_SERVICE_HOST=mongodb://<your_mongodb_host>
+export MONGODB_SERVICE_HOST=<your_mongodb_host>
 export MONGODB_PORT=<your_mongodb_port>                     # usually 27017
 export MONGODB_DATABASE_NAME=esther
 go run .

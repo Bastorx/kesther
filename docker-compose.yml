@@ -11,7 +11,7 @@ services:
     image: local_esther:prod
     environment:
       PORT: 80
-      MONGODB_SERVICE_HOST: mongodb://mongodb.docker
+      MONGODB_SERVICE_HOST: mongodb.docker
       MONGODB_PORT: 27017
       MONGODB_DATABASE_NAME: esther
     networks:

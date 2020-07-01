@@ -4,9 +4,10 @@ import (
 	"net/http"
 	"os"
 
-	"gitlab.citodi.com/coretech/esther/logging"
-
 	"github.com/gin-gonic/gin"
+
+	"gitlab.citodi.com/coretech/esther/logging"
+	"gitlab.citodi.com/coretech/esther/persistence"
 )
 
 func main() {
@@ -66,6 +67,9 @@ func readyCheck(c *gin.Context) {
 
 func autoCheck() map[string][]string {
 	errors := make(map[string][]string)
+	if persistenceErrors := persistence.ReadyCheck(); len(persistenceErrors) > 0 {
+		errors["persistence"] = persistenceErrors
+	}
 	// TODO
 	return errors
 }
