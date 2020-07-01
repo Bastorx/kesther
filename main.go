@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 
@@ -16,7 +17,7 @@ func main() {
 
 	gin.SetMode(gin.ReleaseMode)
 	r := setupRouter()
-	//	autoCheck()
+	autoCheck()
 
 	r.Run()
 }
@@ -44,6 +45,12 @@ func setupRouter() *gin.Engine {
 		api.PUT("/eventCallbacksToParent", putCallbacksToParent)
 	}
 
+	/* Local commands */
+	local := r.Group("", isLocalhost)
+	{
+		local.GET("/reset", doReset)
+	}
+
 	/* OpenAPI doc */
 	r.Static("/openapi", "openapi/")
 
@@ -65,11 +72,53 @@ func readyCheck(c *gin.Context) {
 	c.JSON(http.StatusOK, "OK")
 }
 
+func isLocalhost(c *gin.Context) {
+	clientIP := c.ClientIP()
+	logging.Logger.WithField("clientIP", clientIP).Info("Checking localhost by IP")
+	if clientIP != "127.0.0.1" && clientIP != "::1" {
+		err := fmt.Errorf("%s is not authorized for this action", clientIP)
+		abortWithError(c, http.StatusUnauthorized, err, "Unauthorized IP")
+	}
+}
+
+func doReset(c *gin.Context) {
+	logging.Logger.Info("Reset")
+	errors := reset()
+	logging.Logger.Info("End of reset")
+
+	if len(errors) > 0 {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"errors": errors,
+		})
+		return
+	}
+	c.JSON(http.StatusOK, "OK")
+}
+
+func abortWithError(c *gin.Context, status int, err error, errTitle string) {
+	errDetail := ""
+	if err != nil {
+		errDetail = fmt.Sprintf("%s", err)
+	}
+	logging.Logger.WithField("error", err).Error(errTitle)
+	c.AbortWithStatusJSON(status, gin.H{
+		"error": gin.H{
+			"title":  errTitle,
+			"detail": errDetail,
+		},
+	})
+}
+
 func autoCheck() map[string][]string {
 	errors := make(map[string][]string)
 	if persistenceErrors := persistence.ReadyCheck(); len(persistenceErrors) > 0 {
 		errors["persistence"] = persistenceErrors
 	}
-	// TODO
+	return errors
+}
+
+func reset() []string {
+	errors := []string{}
+	errors = append(errors, persistence.Reset()...)
 	return errors
 }

@@ -18,5 +18,6 @@ WORKDIR /app
 ENV PORT 80
 COPY --from=build-env /src/goapp /app/
 COPY openapi /app/openapi
+COPY bin/reset.sh  /app/reset
 ENTRYPOINT ./goapp
 EXPOSE 80

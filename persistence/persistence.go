@@ -19,10 +19,10 @@ const (
 )
 
 var (
-	mongoDbServiceHost string
-	mongoDbPort        string
-	mongoDbURI         string
-	mongoDbClient      *mongo.Client
+	mongoDbHost   string
+	mongoDbPort   string
+	mongoDbURI    string
+	mongoDbClient *mongo.Client
 )
 
 // ReadyCheck checks if the package is ready to work
@@ -37,6 +37,30 @@ func ReadyCheck() []string {
 	return nil
 }
 
+// Reset will reload the package and clean the data
+func Reset() []string {
+	errors := initEnv()
+	if len(errors) == 0 {
+		errors = initConnection()
+	}
+	if len(errors) == 0 {
+		ctx, cancel := getContext()
+		defer cancel()
+		if err := mongoDbClient.Database(mongoDbName).Drop(ctx); err != nil {
+			errors = append(errors, err.Error())
+		} else {
+			logging.Logger.WithFields(logging.LogFields{
+				"uri":  mongoDbURI,
+				"name": mongoDbName,
+			}).Info("The database has been reset")
+		}
+	}
+	if len(errors) > 0 {
+		logging.Logger.WithField("errors", errors).Error("The reset has failed")
+	}
+	return errors
+}
+
 func init() {
 	if errors := initEnv(); len(errors) == 0 {
 		initConnection()
@@ -46,8 +70,8 @@ func init() {
 func initEnv() []string {
 	errors := []string{}
 	envDbServiceHost := "MONGODB_SERVICE_HOST"
-	mongoDbServiceHost = os.Getenv(envDbServiceHost)
-	if mongoDbServiceHost == "" {
+	mongoDbHost = os.Getenv(envDbServiceHost)
+	if mongoDbHost == "" {
 		errors = append(errors, fmt.Sprintf("%s is not set", envDbServiceHost))
 	} else {
 		envDbPort := "MONGODB_PORT"
@@ -55,7 +79,7 @@ func initEnv() []string {
 		if mongoDbPort == "" {
 			errors = append(errors, fmt.Sprintf("%s is not set", envDbPort))
 		} else {
-			mongoDbURI = fmt.Sprintf("mongodb://%s:%s/", mongoDbServiceHost, mongoDbPort)
+			mongoDbURI = fmt.Sprintf("mongodb://%s:%s/", mongoDbHost, mongoDbPort)
 			logging.Logger.WithFields(logging.LogFields{
 				"uri": mongoDbURI,
 			}).Info("The database connection URI has been set")
