@@ -34,7 +34,7 @@ func setupRouter() *gin.Engine {
 	r.GET("/ready", readyCheck)
 
 	/* API */
-	api := r.Group("/plans/:id")
+	api := r.Group("/plans/:planId")
 	{
 		api.GET("/eventCallbacks", getCallbacks)
 		api.POST("/eventCallbacks", postOneCallback)
