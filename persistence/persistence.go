@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -44,7 +45,7 @@ func Reset() []string {
 		errors = initConnection()
 	}
 	if len(errors) == 0 {
-		ctx, cancel := getContext()
+		ctx, cancel := GetContext()
 		defer cancel()
 		if err := mongoDbClient.Database(mongoDbName).Drop(ctx); err != nil {
 			errors = append(errors, err.Error())
@@ -94,7 +95,7 @@ func initEnv() []string {
 func initConnection() []string {
 	errors := []string{}
 	var err error
-	ctx, cancel := getContext()
+	ctx, cancel := GetContext()
 	defer cancel()
 	mongoDbClient, err = mongo.Connect(ctx, options.Client().ApplyURI(mongoDbURI))
 	if err != nil {
@@ -114,18 +115,90 @@ func initConnection() []string {
 	return errors
 }
 
-func getContext() (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.Background(), contextTimeout)
-}
-
 func checkConnection() error {
 	if mongoDbClient == nil {
 		return fmt.Errorf("The database connection seems to be not initialized")
 	}
-	ctx, cancel := getContext()
+	ctx, cancel := GetContext()
 	defer cancel()
 	if err := mongoDbClient.Ping(ctx, readpref.Primary()); err != nil {
 		return err
 	}
 	return nil
+}
+
+// GetContext Retrieve Database ctx
+func GetContext() (context.Context, context.CancelFunc) {
+	ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
+	return ctx, cancel
+}
+
+// GetCollection Retrieve Collection
+func GetCollection(p Persistable) *mongo.Collection {
+	return mongoDbClient.Database(mongoDbName).Collection(p.EntityName())
+}
+
+type Persistable interface {
+	Id() string
+	PlanId() string
+	EntityName() string
+	FromBson(sr *mongo.SingleResult) Persistable
+}
+
+func ToBson(p Persistable) []byte {
+	bsonSolution, err := bson.Marshal(p)
+	if err != nil {
+		logging.Logger.WithFields(logging.LogFields{
+			"error": err.Error(),
+		}).Error(fmt.Sprintf("Cant bsonMarshal %s", p.EntityName()))
+	}
+	return bsonSolution
+}
+
+// FindOne: Find one entity
+func FindOne(p Persistable) *Persistable {
+	ctx, cancel := GetContext()
+	sr := GetCollection(p).FindOne(ctx, bson.M{"id": p.Id(), "planId": p.PlanId()})
+	if sr.Err() != nil {
+		cancel()
+		logging.Logger.WithFields(logging.LogFields{
+			"stacktrace": sr.Err().Error(),
+		}).Error(fmt.Sprintf("Can't retrieve %s with id : %s", p.EntityName(), p.Id()))
+		return nil
+	}
+	instance := p.FromBson(sr)
+	return &instance
+}
+
+// InsertOne : Insert one entity
+func InsertOne(p Persistable) bool {
+	bson := ToBson(p)
+	ctx, cancel := GetContext()
+	_, errCol := GetCollection(p).InsertOne(ctx, bson)
+	if errCol != nil {
+		cancel()
+		logging.Logger.WithFields(logging.LogFields{
+			"collection": p.EntityName(),
+			"id":         p.Id(),
+			"planId":     p.PlanId(),
+			"error":      errCol.Error(),
+		}).Error("Can't get collection instance")
+		return false
+	}
+	logging.Logger.WithFields(logging.LogFields{"id": p.Id(), "planId": p.PlanId()}).Info(fmt.Sprintf("%s persisted", p.EntityName()))
+	return true
+}
+
+// DeleteOne : Delete one entity
+func DeleteOne(p Persistable) bool {
+	ctx, cancel := GetContext()
+	dr, err := GetCollection(p).DeleteOne(ctx, bson.M{"id": p.Id(), "planId": p.PlanId()})
+	if err != nil {
+		cancel()
+		logging.Logger.WithFields(logging.LogFields{
+			"stacktrace": err.Error(),
+		}).Error(fmt.Sprintf("Can't delete %s with id : %s", p.EntityName(), p.Id()))
+	}
+
+	return dr.DeletedCount == 1
 }
