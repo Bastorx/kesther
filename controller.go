@@ -33,12 +33,14 @@ func getOneCallback(c *gin.Context) {
 }
 
 func postOneCallback(c *gin.Context) {
+	planID := c.Param("planId")
+
 	var eventCallback model.EventCallback
 	if err := c.ShouldBindBodyWith(&eventCallback, binding.JSON); err != nil {
 		abortWithError(c, http.StatusBadRequest, err, "The callback input payload could not be bound")
 		return
 	}
-	createdEventCallback, err := model.CreateEventCallback(eventCallback)
+	createdEventCallback, err := model.CreateEventCallback(planID, eventCallback)
 	if err != nil {
 		abortWithError(c, http.StatusBadRequest, err, "The callback could not be created")
 		return
@@ -49,7 +51,18 @@ func postOneCallback(c *gin.Context) {
 func putOneCallback(c *gin.Context) {
 	planID := c.Param("planId")
 	eventID := c.Param("eventId")
-	c.JSON(http.StatusOK, fmt.Sprintf("PUT callback %s %s", eventID, planID))
+
+	var eventCallback model.EventCallback
+	if err := c.ShouldBindBodyWith(&eventCallback, binding.JSON); err != nil {
+		abortWithError(c, http.StatusBadRequest, err, "The callback input payload could not be bound")
+		return
+	}
+	updatedEventCallback, err := model.UpdateEventCallback(planID, eventID, eventCallback)
+	if err != nil {
+		abortWithError(c, http.StatusBadRequest, err, "The callback could not be updated")
+		return
+	}
+	c.JSON(http.StatusOK, updatedEventCallback)
 }
 
 func putCallbacksToParent(c *gin.Context) {
