@@ -141,14 +141,14 @@ func GetCollection(p Persistable) *mongo.Collection {
 
 type Persistable interface {
 	Id() string
-	SetId(id string) Persistable
+	ResetId(id string) Persistable
 	PlanId() string
 	EntityName() string
 	FromBson(sr *mongo.SingleResult) Persistable
 }
 
 func ToBson(p Persistable) []byte {
-	p = p.SetId("")
+	p = p.ResetId("")
 	bsonSolution, err := bson.Marshal(p)
 	if err != nil {
 		logging.Logger.WithFields(logging.LogFields{
@@ -198,7 +198,7 @@ func InsertOne(p Persistable) string {
 	return res.InsertedID.(primitive.ObjectID).Hex()
 }
 
-// ReplaceOne : Insert one entity
+// ReplaceOne : Replace one entity
 func ReplaceOne(p Persistable) bool {
 	id, err := primitive.ObjectIDFromHex(p.Id())
 	if err != nil {
