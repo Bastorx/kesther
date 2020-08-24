@@ -10,7 +10,7 @@ import (
 
 // EventCallback represents a JSON input/output payload of an event callback
 type EventCallback struct {
-	ID     string `json:"id"`
+	ID     string `bson:"_id,omitempty" json:"id"`
 	PlanID string `json:"planId"`
 	Title  string `json:"title"`
 	Undo   Action `json:"undo"`
@@ -30,7 +30,13 @@ func (eventCallback EventCallback) Id() string {
 	return eventCallback.ID
 }
 
-// PlanID : Get Plan Id
+// ResetId : Reset id (Has to create a new Instance)
+func (eventCallback EventCallback) ResetId(ID string) persistence.Persistable {
+	eventCallback.ID = ID
+	return eventCallback
+}
+
+// PlanId : Get Plan Id
 func (eventCallback EventCallback) PlanId() string {
 	return eventCallback.PlanID
 }

@@ -3,6 +3,7 @@ package model
 import (
 	"fmt"
 
+	"github.com/imdario/mergo"
 	"gitlab.citodi.com/coretech/esther/logging"
 	"gitlab.citodi.com/coretech/esther/persistence"
 	"go.mongodb.org/mongo-driver/bson"
@@ -44,16 +45,34 @@ func FindEventCallbackById(planID string, eventID string) (EventCallback, error)
 }
 
 // CreateEventCallback Create one event
-func CreateEventCallback(eventCallback EventCallback) (EventCallback, error) {
-	if persistence.InsertOne(eventCallback) == false {
-		return EventCallback{}, fmt.Errorf("Can't create the event-callback %s in plan %s", eventCallback.Id(), eventCallback.PlanId())
+func CreateEventCallback(planID string, eventCallback EventCallback) (EventCallback, error) {
+	eventCallback.PlanID = planID
+	id := persistence.InsertOne(eventCallback)
+	if id == "" {
+		return EventCallback{}, fmt.Errorf("Can't create the event-callback in plan %s", eventCallback.PlanId())
 	}
+	eventCallback.ID = id
 	return eventCallback, nil
+}
+
+// UpdateEventCallback Create one event
+func UpdateEventCallback(planID string, eventID string, eventCallback EventCallback) (EventCallback, error) {
+	ec, err := FindEventCallbackById(planID, eventID)
+	if err != nil {
+		return EventCallback{}, err
+	}
+	if err := mergo.Merge(&ec, eventCallback, mergo.WithOverride); err != nil {
+		return EventCallback{}, err
+	}
+	if persistence.ReplaceOne(ec) == false {
+		return EventCallback{}, fmt.Errorf("Can't update the event-callback %s in plan %s", eventCallback.Id(), eventCallback.PlanId())
+	}
+	return ec, nil
 }
 
 // DeleteEventCallbacksById Delete one event
 func DeleteEventCallbacksById(planID string, eventID string) error {
-	if persistence.DeleteOne(EventCallback{ID: eventID}) == false {
+	if persistence.DeleteOne(EventCallback{ID: eventID, PlanID: planID}) == false {
 		return fmt.Errorf("Can't delete the event-callback %s in plan %s", eventID, planID)
 	}
 	return nil
@@ -64,7 +83,7 @@ func DeleteEventCallbacksByPlanId(planID string) error {
 	collection := persistence.GetCollection(EventCallback{})
 	ctx, _ := persistence.GetContext()
 	dr, err := collection.DeleteMany(ctx, bson.D{
-		primitive.E{Key: "plan.planid", Value: planID},
+		primitive.E{Key: "planid", Value: planID},
 	})
 	if err != nil && dr.DeletedCount >= 1 {
 		err := fmt.Sprintf("Can't delete EventCallback with plan-id: %s", planID)

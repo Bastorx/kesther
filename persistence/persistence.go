@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -140,12 +141,14 @@ func GetCollection(p Persistable) *mongo.Collection {
 
 type Persistable interface {
 	Id() string
+	ResetId(id string) Persistable
 	PlanId() string
 	EntityName() string
 	FromBson(sr *mongo.SingleResult) Persistable
 }
 
 func ToBson(p Persistable) []byte {
+	p = p.ResetId("")
 	bsonSolution, err := bson.Marshal(p)
 	if err != nil {
 		logging.Logger.WithFields(logging.LogFields{
@@ -157,13 +160,19 @@ func ToBson(p Persistable) []byte {
 
 // FindOne: Find one entity
 func FindOne(p Persistable) *Persistable {
+	id, err := primitive.ObjectIDFromHex(p.Id())
+	if err != nil {
+		logging.Logger.Error(fmt.Sprintf("Can't retrieve HEX ObjectId : %s", p.Id()))
+		return nil
+	}
 	ctx, cancel := GetContext()
-	sr := GetCollection(p).FindOne(ctx, bson.M{"id": p.Id(), "planId": p.PlanId()})
+
+	sr := GetCollection(p).FindOne(ctx, bson.M{"_id": id, "planid": p.PlanId()})
 	if sr.Err() != nil {
 		cancel()
 		logging.Logger.WithFields(logging.LogFields{
 			"stacktrace": sr.Err().Error(),
-		}).Error(fmt.Sprintf("Can't retrieve %s with id : %s", p.EntityName(), p.Id()))
+		}).Error(fmt.Sprintf("Can't retrieve %s with id : %s and planId : %s", p.EntityName(), p.Id(), p.PlanId()))
 		return nil
 	}
 	instance := p.FromBson(sr)
@@ -171,10 +180,34 @@ func FindOne(p Persistable) *Persistable {
 }
 
 // InsertOne : Insert one entity
-func InsertOne(p Persistable) bool {
+func InsertOne(p Persistable) string {
 	bson := ToBson(p)
 	ctx, cancel := GetContext()
-	_, errCol := GetCollection(p).InsertOne(ctx, bson)
+	res, errCol := GetCollection(p).InsertOne(ctx, bson)
+	if errCol != nil {
+		cancel()
+		logging.Logger.WithFields(logging.LogFields{
+			"collection": p.EntityName(),
+			"id":         p.Id(),
+			"planId":     p.PlanId(),
+			"error":      errCol.Error(),
+		}).Error("Can't get collection instance")
+		return ""
+	}
+	logging.Logger.WithFields(logging.LogFields{"id": p.Id(), "planId": p.PlanId()}).Info(fmt.Sprintf("%s persisted", p.EntityName()))
+	return res.InsertedID.(primitive.ObjectID).Hex()
+}
+
+// ReplaceOne : Replace one entity
+func ReplaceOne(p Persistable) bool {
+	id, err := primitive.ObjectIDFromHex(p.Id())
+	if err != nil {
+		logging.Logger.Error(fmt.Sprintf("Can't retrieve HEX ObjectId : %s", p.Id()))
+		return false
+	}
+	toBson := ToBson(p)
+	ctx, cancel := GetContext()
+	_, errCol := GetCollection(p).ReplaceOne(ctx, bson.M{"_id": id, "planid": p.PlanId()}, toBson)
 	if errCol != nil {
 		cancel()
 		logging.Logger.WithFields(logging.LogFields{
@@ -191,8 +224,13 @@ func InsertOne(p Persistable) bool {
 
 // DeleteOne : Delete one entity
 func DeleteOne(p Persistable) bool {
+	id, err := primitive.ObjectIDFromHex(p.Id())
+	if err != nil {
+		logging.Logger.Error(fmt.Sprintf("Can't retrieve HEX ObjectId : %s", p.Id()))
+		return false
+	}
 	ctx, cancel := GetContext()
-	dr, err := GetCollection(p).DeleteOne(ctx, bson.M{"id": p.Id(), "planId": p.PlanId()})
+	dr, err := GetCollection(p).DeleteOne(ctx, bson.M{"_id": id, "planid": p.PlanId()})
 	if err != nil {
 		cancel()
 		logging.Logger.WithFields(logging.LogFields{
