@@ -67,7 +67,27 @@ func putOneCallback(c *gin.Context) {
 
 func putCallbacksToParent(c *gin.Context) {
 	planID := c.Param("planId")
-	c.JSON(http.StatusOK, fmt.Sprintf("PUT callbacks list to parent %s", planID))
+
+	eventCallbacks, err := model.FindEventCallbacksByPlanId(planID)
+	if err != nil {
+		c.Status(http.StatusNotFound)
+		return
+	}
+
+	for _, eventCallback := range eventCallbacks {
+		err := eventCallback.Apply()
+		if err != nil {
+			abortWithError(c, http.StatusInternalServerError, err, fmt.Sprintf("Error during application of event: %s", eventCallback.ID))
+			return
+		}
+	}
+
+	if err := model.DeleteEventCallbacksByPlanId(planID); err != nil {
+		abortWithError(c, http.StatusInternalServerError, err, "The events could not be deleted")
+		return
+	}
+
+	c.JSON(http.StatusNoContent, fmt.Sprintf("PUT callbacks list to parent %s", planID))
 }
 
 func deleteOneCallback(c *gin.Context) {
