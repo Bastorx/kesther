@@ -13,7 +13,7 @@ variables:
 
 Test app:
   before_script:
-    - git config --global url.https://oauth2:"${GITLAB_TOKEN}"@gitlab.citodi.com/.insteadOf https://gitlab.citodi.com/
+    - git config --global url.https://oauth2:"${GITLAB_TOKEN}"@gitlab.kardinal.ai/.insteadOf https://gitlab.kardinal.ai/
   stage: test
   image: golang:1.13-stretch
   script:

@@ -12,7 +12,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 
-	"gitlab.citodi.com/coretech/esther/logging"
+	"gitlab.kardinal.ai/coretech/esther/logging"
 )
 
 const (

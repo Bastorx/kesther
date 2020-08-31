@@ -4,7 +4,7 @@
 FROM golang:alpine AS build-env
 RUN apk --no-cache add build-base git gcc
 ARG GITLAB_TOKEN="${GITLAB_TOKEN}"
-RUN git config --global url.https://oauth2:"${GITLAB_TOKEN}"@gitlab.citodi.com/.insteadOf https://gitlab.citodi.com/
+RUN git config --global url.https://oauth2:"${GITLAB_TOKEN}"@gitlab.kardinal.ai/.insteadOf https://gitlab.kardinal.ai/
 COPY . /src
 WORKDIR /src
 RUN go get ./...
