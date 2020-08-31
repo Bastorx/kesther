@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
-	"gitlab.citodi.com/coretech/esther/model"
+	"gitlab.kardinal.ai/coretech/esther/model"
 )
 
 func getCallbacks(c *gin.Context) {

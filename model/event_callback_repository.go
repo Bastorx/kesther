@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/imdario/mergo"
-	"gitlab.citodi.com/coretech/esther/logging"
-	"gitlab.citodi.com/coretech/esther/persistence"
+	"gitlab.kardinal.ai/coretech/esther/logging"
+	"gitlab.kardinal.ai/coretech/esther/persistence"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
